@@ -11,7 +11,13 @@
 
 
 # Configuration
+# - - -
+
+# The RTC-device
 DEVICE="/sys/class/rtc/rtc0/wakealarm"
+
+# how many seconds shuld pc wake up before?
+OFFSET=600
 
 # - - -
 
@@ -26,10 +32,11 @@ fi
 # ensure timestamp to be UTC
 DATE=$(date -d @$VDRWAKE +%F" "%T)
 TIMESTAMP=$(date -u --date "$DATE" +%s)
+WAKEUP=$(expr $TIMESTAMP - $OFFSET)
 
 # clear RTC Wakeup, and set new date
 echo 0 > $DEVICE
-echo $TIMESTAMP > $DEVICE
+echo $WAKEUP > $DEVICE
 
 # give out
 cat /proc/driver/rtc | grep alrm
