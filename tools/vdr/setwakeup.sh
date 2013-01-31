@@ -9,6 +9,12 @@
 # see also: http://www.mythtv.org/wiki/ACPI_Wakeup#Disable_hwclock_updates
 # otherwise your RTC-wakeup will be overwritten by your system.
 
+
+# Configuration
+DEVICE="/sys/class/rtc/rtc0/wakealarm"
+
+# - - -
+
 # get next wake timestamp from VDR. This is local time!
 VDRWAKE=$(svdrpsend NEXT abs | grep -E -o '[0-9]{6,}')
 
@@ -19,11 +25,11 @@ fi
 
 # ensure timestamp to be UTC
 DATE=$(date -d @$VDRWAKE +%F" "%T)
-TIMESTAMP=$(date -u --date "$DATE" +%s)+36000
+TIMESTAMP=$(date -u --date "$DATE" +%s)
 
 # clear RTC Wakeup, and set new date
-echo 0 > /sys/class/rtc/rtc0/wakealarm
-echo $TIMESTAMP > /sys/class/rtc/rtc0/wakealarm
+echo 0 > $DEVICE
+echo $TIMESTAMP > $DEVICE
 
 # give out
 cat /proc/driver/rtc | grep alrm
