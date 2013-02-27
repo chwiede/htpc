@@ -1,0 +1,36 @@
+# Maintainer: Christoph Wiedemann <chwiede@gmail.com>
+pkgname=htpcutils
+pkgver=0.1
+pkgrel=1
+pkgdesc="Powermanager and tools for a HTPC based on XBMC and TvHeadend"
+arch=('i686' 'x86_64')
+url=""
+license=('GPL')
+groups=()
+depends=('xorg-server' 'openbox' 'acpid' 'ntp')
+makedepends=()
+optdepends=()
+provides=()
+conflicts=()
+replaces=()
+backup=()
+options=()
+install=htpcutils.install
+changelog=
+
+#source=(http://server/$pkgname-$pkgver.tar.gz)
+
+noextract=()
+
+#md5sums=() #generate with 'makepkg -g'
+
+build() {
+  cp -R * "$pkgdir/"
+  chmod -R +x "$pkgdir/usr/bin/htpcutils/"
+}
+
+#package() {
+#  cd "$srcdir/$pkgname-$pkgver"
+#
+#  make DESTDIR="$pkgdir/" install
+#}

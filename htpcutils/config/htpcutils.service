@@ -1,0 +1,11 @@
+[Unit]
+Description = Starts instance of HTPC Powermanagement
+After = remote-fs.target
+
+[Service]
+ExecStart = /usr/bin/htpcutils/htpc-start.sh
+ExecStop = /usr/bin/htpcutils/htpc-stop.sh
+
+[Install]
+WantedBy = multi-user.target
+
