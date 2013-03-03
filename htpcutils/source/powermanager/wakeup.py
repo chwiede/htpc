@@ -6,8 +6,11 @@ sys.dont_write_bytecode = True
 
 # imports
 import os
+import time
+import record
 import commands
-
+import datetime
+import ConfigParser
 
 def GetLastSetting(persistentFile):
 	try:
@@ -46,10 +49,36 @@ def GetUptime():
 
 
 
-# Test Mode
+# direct mode, open configuration and write wakeup or clear
 if (__name__ == '__main__'):
-	lastSetting = GetLastSetting('/var/tmp/htpc-wakeup.timestamp')
-	print 'Last known setting: ', lastSetting
-	print '-----------------------------------------'
-	print 'RTC: ', open('/proc/driver/rtc', 'r').read()
-
+	
+	# load config
+	config = ConfigParser.ConfigParser()
+	config.read(['/etc/htpcutils/htpc.conf'])
+	
+	# define wakeup variables
+	wakeupFile = config.get('Paths', 'RtcPersistent')
+	wakeupDevice = config.get('Devices', 'RtcDevice')
+	
+	# print config
+	print 'persistend file:   ', wakeupFile
+	print 'rtc device:        ', wakeupDevice
+	print 'timestamp now:     ', int(time.time())
+	
+	# instantiate record scanner, get next record
+	recordScanner = record.RecordScanner(config.get('Paths', 'DvrLogPath'))
+	nextRecord = recordScanner.GetNextRecord()
+	
+	# clear wakeup. happens wether record defined or not
+	ClearWakeup(wakeupFile, wakeupDevice)
+	
+	if(nextRecord != None):
+		wakeupTimestamp = nextRecord.TimeBegin - float(config.get('Times', 'WakeUpBefore'))
+		SetWakeup(wakeupFile, wakeupDevice, int(wakeupTimestamp))
+		print 'timestamp rec:     ', int(wakeupTimestamp)
+		print 'Next wakeup set to: %s' % datetime.datetime.fromtimestamp(wakeupTimestamp)
+	else:
+		print 'Wakup was cleared. No record planned!'
+	
+	
+	
