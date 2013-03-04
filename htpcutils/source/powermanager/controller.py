@@ -2,12 +2,16 @@
 
 # Import sytem, deny output of bytecode
 import sys
+from compiler.ast import TryExcept
+from ubuntu_sso.utils.ui import TRY_AGAIN_BUTTON
+from compiler.pycodegen import TRY_FINALLY
 sys.dont_write_bytecode = True
 
 # imports
 import os
 import time
 import acpid
+import config
 import record
 import wakeup
 import process
@@ -15,242 +19,159 @@ import datetime
 import ConfigParser
 from thread import start_new_thread
 
-class controller():    
+class controller():
     
-    RecordScanner = None
-    WakeupFile = None
-    WakeupDevice = None
-    Config = None
-    FrontendActive = False
-    CheckingForShutdown = False
-    IsEnabled = True
+    RecordScanner = record.RecordScanner(config.DVR_LOG_PATH)
+    FrontendDesired = False
+    PollRequest = False
     
     
-    def __init__(self):
-        # open configuration
-        self.Config = ConfigParser.ConfigParser()
-        self.Config.read(['/etc/htpcutils/htpc.conf'])
+    def FrontendExit(self, proc):
+        print 'frontend has been closed with returncode ', proc.returncode
         
-        self.WakeupFile = self.Config.get('Paths', 'RtcPersistent')
-        self.WakeupDevice = self.Config.get('Devices', 'RtcDevice')
+        # clean exit? correct frontend desired state
+        if(proc.returncode == 0):
+            self.FrontendDesired = False
         
-        self.RecordScanner = record.RecordScanner(self.Config.get('Paths', 'DvrLogPath'))
-      
+        # frontend crashed, but should be open? restart!
+        elif(self.FrontendDesired and config.FRONTEND_RESTART):
+            self.FrontendStateChange()
+            
+        # frontend dead, and no frontend desired?? request for shutdown
+        if(not self.FrontendDesired):
+            print 'initiating exit request'
+            self.PollRequest = True
         
-        
-    def GetAwakedForRecord(self):
+    
+
+    def FrontendStateChange(self):
+        # frontend desired, but not running? start it!
+        if(self.FrontendDesired and not process.GetProcessIsActive(config.PROC_FRONTEND)):
+            print 'starting frontend.'
+            process.StartWithCallback(config.CMD_FRONTEND, self.FrontendExit)
+            process.WaitFor(config.PROC_FRONTEND)
+            
+        # frontend not desired, but running? kill it
+        if(not self.FrontendDesired and process.GetProcessIsActive(config.PROC_FRONTEND)):
+            print 'wait for frontend exit...'
+            time.sleep(5.0)
+            
+            # frontend still running? send kill signal.                
+            if(process.GetProcessIsActive(config.PROC_FRONTEND)):
+                print 'frontend still alive -> sending kill signal!'
+                process.Kill(config.PROC_FRONTEND, True)
+
+
+    
+    def AcpidEvent(self, acpiResult):
+        # check for power button
+        if(acpiResult.startswith('button/power')):
+            print 'got acpid-powerbutton event, toggle frontend desired state'
+            self.FrontendDesired = not self.FrontendDesired
+            self.FrontendStateChange()
+            
+                
+                
+    def GetIsUpForRecord(self):
         # machine is in record mode, if
         # * known wakeup is some minutes ago
         # * a records is planned in some minutes
         
         # so get some timestamps to work with
-        lastWakeup = wakeup.GetLastSetting(self.WakeupFile)
+        lastWakeup = wakeup.GetLastSetting(config.RTC_PERSISTENT)
         nextRecord = self.RecordScanner.GetNextRecord()
         uptime = wakeup.GetUptime()
         now = time.time()
         
-        bootTimeAvg = float(self.Config.get('Times', 'BootTime'))
-        wakeupBefore = float(self.Config.get('Times', 'WakeUpBefore'))
-                
         return (
             lastWakeup != 0
             and nextRecord != None
-            and ((now - uptime) - lastWakeup) < bootTimeAvg
-            and (nextRecord.TimeBegin - now) < wakeupBefore
-        )  
+            and ((now - uptime) - lastWakeup) < config.BOOT_TIME
+            and (nextRecord.TimeBegin - now) < config.WAKE_BEFORE
+        )
     
     
     
-    
-    def GetFrontendRunning(self):
-        procName = self.Config.get('Paths', 'FrontendProcess')
-        return process.GetProcessIsActive(procName)
-    
-    
-    
-    def FrontendHasEnded(self, proc):
-        restartAtError = self.Config.get('Misc', 'FrontendRestart')
+    def GetIsRecordMode(self):
+        records = self.RecordScanner.GetRecords()
         
-        if(proc.returncode == 0 or self.FrontendActive == False):
-            print 'frontend has ended successfully.'
-            self.StopFrontend(False)
-        elif (restartAtError == '1'):
-            print 'frontend has ended with error=', proc.returncode
-            print 'frontend will be restarted...'
-            self.StartFrontend()
-        else:
-            print 'frontend as endet with error, but will not be restarted.'
-            print 'change configuration to restart frontend.'
-    
-    
-    
-    def StartFrontend(self):
-        # set flag
-        self.FrontendActive = True        
-        
-        frontendCmd = self.Config.get('Paths', 'Frontend')
-        process.StartWithCallback(frontendCmd, self.FrontendHasEnded)
-        
-        while(not self.GetFrontendRunning()):
-            time.sleep(0.5)
-            
-    
-    
-    def StopFrontend(self, kill = True, killWait = 0):
-        # set flag
-        self.FrontendActive = False
-        
-        # define worker logic
-        def StopFrontendLogic():
-            time.sleep(killWait)            
-            procName = self.Config.get('Paths', 'FrontendProcess')
-            if(kill and process.GetProcessIsActive(procName)):
-                process.Kill(procName)
-                print 'frontend terminated.'
-                
-            self.CheckForShutdown()
-            
-        # Call worker logic
-        if(killWait > 0):
-            start_new_thread(StopFrontendLogic, ())
-        else:
-            StopFrontendLogic()
-            
-            
-        
-        
-    
-    #def EnsureFrontendState(self):
-    #    # check for frontend and correct state
-    #    frontendRunning = self.GetFrontendRunning()
-    #    if(self.FrontendActive and not frontendRunning):
-    #        self.StartFrontend()
-    #        
-    #    if(frontendRunning and not self.FrontendActive):
-    #        self.StopFrontend()
-            
-            
-        
-    def GetIsRecordActive(self):
-        # is currently a record active?
-        allRecords = self.RecordScanner.GetRecords()
-        
-        for rec in allRecords:
+        for rec in records:
             if(rec.IsRunning):
                 return True
             
-        #maybe there's a record in a few minutes?
-        recordBridgeTime = 60.0 * float(self.Config.get('Times', 'RecordBridgeTime'))
-        recordNext = self.RecordScanner.GetNextRecord(allRecords)
-        
-        if(recordNext == None):
+        nextRecord = self.RecordScanner.GetNextRecord(records)
+        if(nextRecord == None):
             return False
-
-        return ((recordNext.TimeBegin - time.time()) < recordBridgeTime)
-    
-    
-    
+        else:
+            return (nextRecord.TimeBegin - time.time()) < config.RECORD_BRIDGE
+            
+            
+            
     def Shutdown(self):
-        # shutdown only once :-)
-        if(self.IsEnabled == False):
-            return;
-        else:
-            self.IsEnabled = False
-        
-        # set next wakeup
-        nextRecord = self.RecordScanner.GetNextRecord()
-        wakeup.ClearWakeup(self.WakeupFile, self.WakeupDevice)
-        if(nextRecord != None):
-            wakeupTimestamp = nextRecord.TimeBegin - float(self.Config.get('Times', 'WakeUpBefore'))
-            wakeup.SetWakeup(self.WakeupFile, self.WakeupDevice, wakeupTimestamp)
-            print 'Next Wakeup set to %s' % datetime.datetime.fromtimestamp(wakeupTimestamp)              
-        
-        # bye bye, see you next time
-        if(self.FrontendActive):
-            self.StopFrontend(True)
-        
-        # run shutdown command
-        shutdownCmd = self.Config.get('Paths', 'Shutdown')
-        os.system(shutdownCmd)        
-                
-    
-    
-    
-    def CheckForShutdown(self):
-        # leave, if flag or frontend active
-        if(self.CheckingForShutdown or self.FrontendActive):
-            return
-        
-        # set flag
-        self.CheckingForShutdown = True
-        
-        # is an record (soon) running? 
-        isRecordActive = self.GetIsRecordActive()
-        
-        # no record, no frontend?? go sleep!
-        if(not isRecordActive):
-            print 'nothing to do, invoke shutdown.'
-            self.Shutdown()
-        else:
-            print 'frontend standby mode (record active)'
-            
-        # reset flag
-        self.CheckingForShutdown = False
-       
-    
-    
-    def AcpidEvent(self, acpiResult):
-        # check for power button
-        if(acpiResult.startswith('button/power')):
-            
-            print 'got acpid-powerbutton event.'
-            
-            # frontend not active? toggle bit, and start!
-            if(self.FrontendActive == False):
-                print 'starting frontend...'
-                self.StartFrontend()
-            
-            # frontend seems to be active. stop with delay...    
-            else:
-                print 'try stopping frontend...'
-                self.StopFrontend(kill=True, killWait=5.0)
-            
-    
- 
+        print 'initiating shutdown: ', config.CMD_SHUTDOWN
+        process.Start(config.CMD_SHUTDOWN)
+        exit()
+                                
 
+    
     def Run(self):
-        # find out, if machine was started for an record
-        isAwakedForRecord = self.GetAwakedForRecord()        
-        
-        # if not recordmode, start frontend
-        if(not isAwakedForRecord):
-            self.StartFrontend()
-            
-        # start acpid-watchdog
+        print 'HTPC-UTILS CONTROLLER STARTED!'
+        # hook into acpid
         acpiWatcher = acpid.Acpid()
         acpiWatcher.Listen(self.AcpidEvent)
+
+        # up for a record?
+        upForRecord = self.GetIsUpForRecord()
+        if(upForRecord):
+            print 'wakeup for an record => standbymode'
+        else:
+            print 'normal wakeup => starting frontend'
         
-        # get polling time
-        checkPollTime = max(10, float(self.Config.get('Times', 'PollTime')))
-        
-        # go into main loop
-        lastCheck = 0        
-        while(self.IsEnabled):
-            # wich time? someone has a clock?
-            now = time.time()
+        isRecordMode = upForRecord
+        self.FrontendDesired = not upForRecord
+        self.FrontendStateChange()
+
+        # main loop
+        checkDone = False
+        lastCheck = time.time()
+        while(True):
             
-            # check records not to often. (multi file scan...)
-            if(now - lastCheck > checkPollTime):
-                self.CheckForShutdown()
-                lastCheck = now                 
-                        
-            time.sleep(0.2)
+            # poll for records
+            if(self.PollRequest or (time.time() - lastCheck) > config.POLL_TIME):
+                isRecordMode = self.GetIsRecordMode()
+                lastCheck = time.time()
+                checkDone = True
+                self.PollRequest = False
+            
+            # no record, no frontend? leave main loop.
+            if(checkDone and not isRecordMode and not self.FrontendDesired):
+                break;
+            
+            # wait some time, clear flags            
+            time.sleep(0.25)
+            checkDone = False
         
-        
+        # bye
+        self.Shutdown()        
 
 
 
-# Direct Mode            
+
+# Run Mode            
 if (__name__ == '__main__'):
     ctl = controller()
-    ctl.Run()
+
+    try:
+        ctl.Run()
+    except SystemExit:
+        print '\nsystem exit.\n'
+        pass
+    except KeyboardInterrupt:
+        print '\nuser has aborted via ctrl+c.\n'
+        pass
+    except Exception ,e:
+        import traceback
+        print 'GOT EXCEPTION! Program aborted.'
+        print traceback.format_exc()        
+        
+        

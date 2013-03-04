@@ -16,6 +16,7 @@ def Start(cmd):
 	return subprocess.Popen(cmd, shell=True)
 
 
+
 def StartWithCallback(cmd, exitCallback):
 	def StartAsync():
 		proc = subprocess.Popen(cmd, shell=True)
@@ -23,6 +24,7 @@ def StartWithCallback(cmd, exitCallback):
 		exitCallback(proc)
 		
 	start_new_thread(StartAsync, ())
+
 
 
 def WaitFor(name, timeout = 10):

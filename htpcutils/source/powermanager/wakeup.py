@@ -8,6 +8,7 @@ sys.dont_write_bytecode = True
 import os
 import time
 import record
+import config
 import commands
 import datetime
 import ConfigParser
@@ -51,30 +52,17 @@ def GetUptime():
 
 # direct mode, open configuration and write wakeup or clear
 if (__name__ == '__main__'):
-	
-	# load config
-	config = ConfigParser.ConfigParser()
-	config.read(['/etc/htpcutils/htpc.conf'])
-	
-	# define wakeup variables
-	wakeupFile = config.get('Paths', 'RtcPersistent')
-	wakeupDevice = config.get('Devices', 'RtcDevice')
-	
-	# print config
-	print 'persistend file:   ', wakeupFile
-	print 'rtc device:        ', wakeupDevice
-	print 'timestamp now:     ', int(time.time())
-	
+
 	# instantiate record scanner, get next record
-	recordScanner = record.RecordScanner(config.get('Paths', 'DvrLogPath'))
+	recordScanner = record.RecordScanner(config.DVR_LOG_PATH)
 	nextRecord = recordScanner.GetNextRecord()
 	
 	# clear wakeup. happens wether record defined or not
-	ClearWakeup(wakeupFile, wakeupDevice)
+	ClearWakeup(config.RTC_PERSISTENT, config.RTC_DEVICE)
 	
 	if(nextRecord != None):
-		wakeupTimestamp = nextRecord.TimeBegin - float(config.get('Times', 'WakeUpBefore'))
-		SetWakeup(wakeupFile, wakeupDevice, int(wakeupTimestamp))
+		wakeupTimestamp = nextRecord.TimeBegin - float(config.WAKE_BEFORE)
+		SetWakeup(config.RTC_PERSISTENT, config.RTC_DEVICE, int(wakeupTimestamp))
 		print 'timestamp rec:     ', int(wakeupTimestamp)
 		print 'Next wakeup set to: %s' % datetime.datetime.fromtimestamp(wakeupTimestamp)
 	else:
