@@ -18,6 +18,7 @@ from thread import start_new_thread
 
 class controller():
     
+    RestartCounter = 0
     RecordScanner = record.RecordScanner(config.DVR_LOG_PATH)
     FrontendDesired = False
     PollRequest = False
@@ -32,7 +33,14 @@ class controller():
         
         # frontend crashed, but should be open? restart!
         elif(self.FrontendDesired and config.FRONTEND_RESTART):
-            self.FrontendStateChange()
+            time.sleep(5)
+            if(self.RestartCounter < 10):
+                self.RestartCounter = self.RestartCounter + 1
+                self.FrontendStateChange()
+            else:
+                print 'ERROR! Frontent crashed more then 10 times.'
+                print 'something strange is happening... exit!'
+                exit()
             
         # frontend dead, and no frontend desired?? request for shutdown
         if(not self.FrontendDesired):
