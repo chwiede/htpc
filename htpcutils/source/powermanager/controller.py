@@ -2,9 +2,6 @@
 
 # Import sytem, deny output of bytecode
 import sys
-from compiler.ast import TryExcept
-from ubuntu_sso.utils.ui import TRY_AGAIN_BUTTON
-from compiler.pycodegen import TRY_FINALLY
 sys.dont_write_bytecode = True
 
 # imports
