@@ -18,6 +18,7 @@ from thread import start_new_thread
 
 class controller():
     
+    ControllerAlive = True
     RestartCounter = 0
     RecordScanner = record.RecordScanner(config.DVR_LOG_PATH)
     FrontendDesired = False
@@ -40,6 +41,7 @@ class controller():
             else:
                 print 'ERROR! Frontent crashed more then 10 times.'
                 print 'something strange is happening... exit!'
+                self.ControllerAlive = False
                 exit()
             
         # frontend dead, and no frontend desired?? request for shutdown
@@ -139,7 +141,7 @@ class controller():
         # main loop
         checkDone = False
         lastCheck = time.time()
-        while(True):
+        while(self.ControllerAlive):
             
             # poll for records
             if(self.PollRequest or (time.time() - lastCheck) > config.POLL_TIME):
@@ -157,7 +159,8 @@ class controller():
             checkDone = False
         
         # bye
-        self.Shutdown()        
+        if(self.ControllerAlive):
+            self.Shutdown()        
 
 
 
