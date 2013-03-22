@@ -49,7 +49,7 @@ build() {
   cp "$source/config/htpc.conf" "$pkgdir/etc/htpcutils/"
   cp "$source/config/htpcutils.service" "$pkgdir/lib/systemd/system/"
   
-  cd "$source/source"
+  cd "$source/controller"
   cp -R * "$pkgdir/usr/lib/htpcutils/"
   chmod -R +x "$pkgdir/usr/lib/htpcutils/"
     
