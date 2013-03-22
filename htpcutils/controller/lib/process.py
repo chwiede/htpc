@@ -1,6 +1,5 @@
 #!/usr/bin/python2
 
-import sys
 import time
 import subprocess
 

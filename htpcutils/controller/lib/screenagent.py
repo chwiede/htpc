@@ -7,8 +7,8 @@ from thread import start_new_thread
 
 class ScreenAgent():
     
-    _command = 'xrandr -q | grep connected'
-    _pollInterval = 2.5
+    _command = 'xrandr --current | grep connected'
+    _pollInterval = 5.0
     _pollEnabled = False
     _callback = None
     
