@@ -1,11 +1,13 @@
 [Unit]
-Description = Starts instance of HTPC Powermanagement
-After = remote-fs.target
+Description=HTPC Utils
+Wants=tvheadend.service
+After=acpid.service tvheadend.service
 
 [Service]
-ExecStart = /usr/bin/htpcutils/htpc-start.sh
-ExecStop = /usr/bin/htpcutils/htpc-stop.sh
+Type=simple
+ExecStart=/usr/lib/htpcutils/startup.sh
+ExecStop=/usr/lib/htpcutils/lib/wakeup.py
+Restart=on-failure
 
 [Install]
-WantedBy = multi-user.target
-
+WantedBy=multi-user.target
