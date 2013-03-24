@@ -7,6 +7,7 @@ import time
 import datetime
 import subprocess
 import record
+import config
 
 
 MANUAL = 0
@@ -80,7 +81,6 @@ def GetWakeupReason(persistentFile, allRecords):
 
 # direct mode, open configuration and write wakeup or clear
 if (__name__ == '__main__'):
-    import config
 
     # instantiate record scanner, get next record
     allRecords = record.GetRecords(config.DVR_FOLDER)
