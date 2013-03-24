@@ -18,6 +18,6 @@ MODE_RECORD_STOP = configParser.get('modes', 'mode_record_stop')
 MODE_WATCH_START = configParser.get('modes', 'mode_watch_start') 
 MODE_WATCH_STOP = configParser.get('modes', 'mode_watch_stop')
 
-WAKE_BEFORE = configParser.get('times', 'wake_before')
+WAKE_BEFORE = float(configParser.get('times', 'wake_before'))
 RECORD_BRIDGE = float(configParser.get('times', 'record_bridge') * 60)
 
