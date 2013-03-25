@@ -87,21 +87,19 @@ if (__name__ == '__main__'):
     nextRecord = record.GetNextRecord(allRecords)
     valueToSet = 0
     
+    # clear rtc wakeup
+    ClearWakeup(config.RTC_PERSISTENT, config.RTC_DEVICE)
+    
+    # set new, if there is a record
     if(nextRecord != None):
         valueToSet = int(nextRecord.TimeBegin - config.WAKE_BEFORE)
     
-    # determine last setted value
-    valueLast = int(GetLastSetting(config.RTC_PERSISTENT))
-    
-    # avoid multiple rewrites    
-    if(valueToSet != valueLast):
-        ClearWakeup(config.RTC_PERSISTENT, config.RTC_DEVICE)
-        
         if(valueToSet > time.time()):
             SetWakeup(config.RTC_PERSISTENT, config.RTC_DEVICE, valueToSet)
         else:
-            print 'no new wakeup to set.'
-    
+            print 'planned record is in past. rtc just cleared.'
+
     else:
-        print 'no wakeup changes detected.'
+        print 'no planned record found, no new wakeup to set.'
+    
         
