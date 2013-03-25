@@ -93,9 +93,17 @@ if (__name__ == '__main__'):
     records = sorted(records, key=lambda rec: rec.TimeBegin)
 
     for rec in records:
-        print '"%s"\n%s - %s\n\n' % (
+        print '"%s" %s\n%s - %s\n' % (
             rec.Title,
+            '*' if rec.IsRunning else '',
             datetime.datetime.fromtimestamp(rec.TimeBegin),
             datetime.datetime.fromtimestamp(rec.TimeEnd)
+        )
+        
+    rec = GetNextRecord(records)
+    if(rec != None):
+        print 'about %s minutes to next record: "%s"' % (
+            int((rec.TimeBegin - time.time()) / 60),
+            rec.Title
         )
         
