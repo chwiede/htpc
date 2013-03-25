@@ -99,9 +99,6 @@ class Controller():
 			# stop current mode
 			self.ModeCurrent.Stop()
 			
-			# set wakeup
-			self.SetWakeup()
-		
 		except:
 			print 'error while stop logic. shutdown anyway...'
 			
