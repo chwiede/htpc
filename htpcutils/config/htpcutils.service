@@ -1,7 +1,7 @@
 [Unit]
 Description=HTPC Utils
 Wants=tvheadend.service
-After=acpid.service tvheadend.service
+After=network.target acpid.service tvheadend.service
 
 [Service]
 Type=simple
