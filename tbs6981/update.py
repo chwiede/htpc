@@ -3,7 +3,6 @@
 # imports
 import os
 import re
-import time
 import urllib
 from os.path import expanduser
 
