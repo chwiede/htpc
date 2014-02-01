@@ -198,6 +198,11 @@ class Controller():
 		# start mode
 		self.ModeCurrent.Start()
 		
+		# wait for display if needed
+		if config.WAIT_FOR_DISPLAY != None:
+			if int(config.WAIT_FOR_DISPLAY) > 0:
+				time.sleep(int(config.WAIT_FOR_DISPLAY))
+		
 		# subscribe to events
 		self.SubscribePowerButton()
 		self.SubscribeScreenChange()

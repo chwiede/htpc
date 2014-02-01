@@ -13,6 +13,8 @@ RTC_DEVICE = configParser.get('common', 'rtc_device')
 
 CMD_SHUTDOWN = configParser.get('common', 'cmd_shutdown')
 
+WAIT_FOR_DISPLAY = configParser.get('common', 'wait_for_display')
+
 MODE_RECORD_START = configParser.get('modes', 'mode_record_start')
 MODE_RECORD_STOP = configParser.get('modes', 'mode_record_stop')
 MODE_WATCH_START = configParser.get('modes', 'mode_watch_start') 
