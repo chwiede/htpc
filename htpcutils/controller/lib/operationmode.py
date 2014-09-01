@@ -46,7 +46,7 @@ class OperationMode():
 		
 	def GetXRunning(self):
 		# try to get PID of process 'X'
-		result = process.GetOutput('pidof X')
+		result = process.GetOutput('pidof Xorg.bin')
 		
 		# return true, if PID found!
 		return result != None and result != ''
